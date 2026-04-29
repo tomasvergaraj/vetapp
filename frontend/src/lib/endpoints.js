@@ -29,6 +29,13 @@ export async function fetchMe() {
   return data
 }
 
+export async function changePassword(currentPassword, newPassword) {
+  await api.patch('/auth/password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+}
+
 // ---------- Admin: dashboard ----------
 
 export async function fetchDashboard() {

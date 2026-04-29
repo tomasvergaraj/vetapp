@@ -9,6 +9,7 @@ import {
 } from 'react-router-dom'
 import {
   ClipboardList,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -17,9 +18,14 @@ import {
   X,
 } from 'lucide-react'
 import clsx from 'clsx'
+import toast from 'react-hot-toast'
 import { useAuth } from '../../lib/auth'
 import { LoadingScreen } from '../../components/Loading'
 import Logo from '../../components/Logo'
+import Modal from '../../components/Modal'
+import { Field, Input } from '../../components/FormControls'
+import { changePassword } from '../../lib/endpoints'
+import { getErrorMessage } from '../../lib/api'
 
 const navItems = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -98,6 +104,8 @@ export default function AdminLayout() {
 }
 
 function SidebarContent({ user, onLogout, onNavigate }) {
+  const [pwOpen, setPwOpen] = useState(false)
+
   return (
     <>
       <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
@@ -148,14 +156,115 @@ function SidebarContent({ user, onLogout, onNavigate }) {
           <div className="truncate text-xs text-ink-muted">{user?.email}</div>
           <button
             type="button"
-            onClick={onLogout}
+            onClick={() => setPwOpen(true)}
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-ink-soft hover:bg-canvas hover:text-ink"
+          >
+            <KeyRound className="h-3.5 w-3.5" />
+            Cambiar contraseña
+          </button>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-ink-soft hover:bg-canvas hover:text-ink"
           >
             <LogOut className="h-3.5 w-3.5" />
             Cerrar sesión
           </button>
         </div>
       </div>
+
+      <ChangePasswordModal open={pwOpen} onClose={() => setPwOpen(false)} />
     </>
+  )
+}
+
+function ChangePasswordModal({ open, onClose }) {
+  const [form, setForm] = useState({ current: '', next: '', confirm: '' })
+  const [errors, setErrors] = useState({})
+  const [saving, setSaving] = useState(false)
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  const handleClose = () => {
+    setForm({ current: '', next: '', confirm: '' })
+    setErrors({})
+    onClose()
+  }
+
+  const validate = () => {
+    const e = {}
+    if (!form.current) e.current = 'Requerida'
+    if (form.next.length < 8) e.next = 'Mínimo 8 caracteres'
+    if (form.next !== form.confirm) e.confirm = 'Las contraseñas no coinciden'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!validate()) return
+    setSaving(true)
+    try {
+      await changePassword(form.current, form.next)
+      toast.success('Contraseña actualizada')
+      handleClose()
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'No se pudo cambiar la contraseña.'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="Cambiar contraseña"
+      footer={
+        <>
+          <button type="button" onClick={handleClose} className="btn-secondary px-4 py-2 text-sm">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="change-pw-form"
+            disabled={saving}
+            className="btn-primary px-4 py-2 text-sm"
+          >
+            {saving ? 'Guardando…' : 'Guardar'}
+          </button>
+        </>
+      }
+    >
+      <form id="change-pw-form" onSubmit={handleSubmit} className="space-y-4">
+        <Field label="Contraseña actual" error={errors.current} required>
+          <Input
+            type="password"
+            value={form.current}
+            onChange={set('current')}
+            error={errors.current}
+            autoComplete="current-password"
+          />
+        </Field>
+        <Field label="Nueva contraseña" error={errors.next} required>
+          <Input
+            type="password"
+            value={form.next}
+            onChange={set('next')}
+            error={errors.next}
+            autoComplete="new-password"
+          />
+        </Field>
+        <Field label="Confirmar nueva contraseña" error={errors.confirm} required>
+          <Input
+            type="password"
+            value={form.confirm}
+            onChange={set('confirm')}
+            error={errors.confirm}
+            autoComplete="new-password"
+          />
+        </Field>
+      </form>
+    </Modal>
   )
 }
