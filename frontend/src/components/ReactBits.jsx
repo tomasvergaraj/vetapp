@@ -78,6 +78,7 @@ export function CountUp({ to, suffix = '', duration = 1.8 }) {
   useEffect(() => {
     const el = ref.current
     if (!el) return
+    started.current = false
     const obs = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !started.current) {
