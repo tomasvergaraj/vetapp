@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-ssr/
+.local/
+*.log
+.env
+.env.local
+.env.*.local
+!.env.example
+.DS_Store
+.vscode/
+.idea/
